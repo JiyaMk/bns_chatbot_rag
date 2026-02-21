@@ -1,0 +1,168 @@
+import uuid
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from vector_store import VectorStore
+from groq_client import call_llm
+from memory import Memory
+
+app = FastAPI()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+vector_store = VectorStore()
+memories = {}
+# Cached retrieval from first user message (ensures we keep theft/snatching etc. from "stole my chain")
+initial_retrievals = {}
+
+
+def get_memory(session_id: str | None) -> Memory:
+    """Get or create memory for a session."""
+    sid = session_id or str(uuid.uuid4())
+    if sid not in memories:
+        memories[sid] = Memory()
+    return memories[sid], sid
+
+
+# Request/Response models
+class MessageRequest(BaseModel):
+    message: str
+    session_id: str | None = None
+
+
+class ResetRequest(BaseModel):
+    session_id: str | None = None
+
+
+class VerdictRequest(BaseModel):
+    session_id: str | None = None
+
+
+SYSTEM_PROMPT = """
+You are a legal assistant for Bharatiya Nyaya Sanhita (BNS). Use ONLY the retrieved sections.
+
+**Your process:**
+
+1. **Analyse the retrieved sections** - For each section, identify what facts or conditions are needed to determine if it applies. (e.g. value of property for theft, use of force for robbery, relationship for domestic violence, etc.)
+
+2. **Ask section-specific questions** - Ask questions that help you verify whether each retrieved section applies or not. Focus on the legal elements in each section. Ask only what you need to decide. You may ask 1-2 questions per turn, but ask until you have complete understanding.
+
+3. **Include or exclude sections** - Once you have enough information:
+   - Include a section if the user's facts satisfy its legal conditions.
+   - Exclude a section if the facts show it does not apply. (e.g. chain worth >5000 means the "value less than 5000" provision does not apply.)
+
+4. Do not ask same question more than once, if the user has not answered any question you asked simply move on with the given detail. But don't ask same question or variations of the same question again.
+
+5. **Give the final answer** - Return ONLY the sections that apply. Format each as (plain text, no tables):
+
+Section [number] - [title]
+What it means: [1-2 sentences in plain English]
+Why it applies to you: [1 sentence]
+Punishment: [if mentioned]
+
+Separate sections with a blank line. Do not invent sections. Do not include sections that do not apply.
+
+5. **If NONE of the retrieved sections apply:** Say: "The sections I have access to don't clearly match your situation. Your situation may still be covered under BNS. I recommend consulting a lawyer who can review the full law and your specific case."
+
+**IMPORTANT:** Before concluding "none apply", re-check each retrieved section. If the user describes theft, snatching, robbery, hurt, assault, threats, or similar - at least one section likely applies. Compare each section's legal conditions carefully. Only say "none apply" when truly no retrieved section matches.
+
+**Rules:** Do not ask about evidence, recordings, or witnesses. Ask only what the legal conditions require.
+"""
+
+
+@app.post("/api/message")
+def chat(req: MessageRequest):
+    memory, session_id = get_memory(req.session_id)
+    user_input = req.message
+
+    memory.add("user", user_input)
+
+    # Retrieval: use full conversation + cached initial query
+    history = memory.get()
+    user_messages = [m["content"] for m in history if m["role"] == "user"]
+    full_query = " ".join(user_messages)
+
+    # Expand query with legal synonyms to improve retrieval (stole->theft, snatched->snatching, etc.)
+    def expand_query(q):
+        q = q.lower()
+        extras = []
+        if any(w in q for w in ["stole", "stolen", "steal", "thief", "theft"]): extras.append("theft")
+        if any(w in q for w in ["snatch", "snatched"]): extras.append("snatching")
+        if any(w in q for w in ["hurt", "hit", "injured", "pain"]): extras.append("hurt")
+        if any(w in q for w in ["threat", "threaten"]): extras.append("criminal intimidation")
+        if any(w in q for w in ["assault", "attack"]): extras.append("assault")
+        return " ".join([q] + extras) if extras else q
+
+    if len(user_messages) == 1:
+        # First message: retrieve and cache for this session
+        q1 = expand_query(user_messages[0])
+        initial_retrievals[session_id] = vector_store.retrieve(q1, top_k=10)
+        retrieved_sections = initial_retrievals[session_id]
+    else:
+        # Later: retrieve with full conversation, merge with initial (never lose theft/snatching from "stole my chain")
+        fresh = vector_store.retrieve(expand_query(full_query), top_k=15)
+        initial = initial_retrievals.get(session_id, [])
+        seen = set()
+        merged = []
+        for doc in initial + fresh:
+            if doc not in seen:
+                seen.add(doc)
+                merged.append(doc)
+        retrieved_sections = merged[:20]  # cap total
+
+    context = "\n\n".join(retrieved_sections)
+
+    messages = [{"role": "system", "content": SYSTEM_PROMPT}]
+    messages.extend(history[:-1])  # Exclude current user msg - it goes in the structured block below
+
+    messages.append(
+        {
+            "role": "user",
+            "content": f"""
+User Query: {user_input}
+
+Retrieved Sections:
+{context}
+""",
+        }
+    )
+
+    response = call_llm(messages)
+    if response is None or not str(response).strip():
+        response = (
+            "I'm having trouble getting a response right now. "
+            "Please try again, or rephrase your message."
+        )
+    memory.add("assistant", response)
+
+    return {"session_id": session_id, "response": response, "bot": response}
+
+
+@app.post("/api/reset")
+def reset(req: ResetRequest):
+    sid = req.session_id or str(uuid.uuid4())
+    if sid in memories:
+        del memories[sid]
+    if sid in initial_retrievals:
+        del initial_retrievals[sid]
+    memories[sid] = Memory()
+    return {"session_id": sid}
+
+
+@app.post("/api/verdict")
+def verdict(req: VerdictRequest):
+    """Return the last assistant message as the verdict for the session."""
+    if not req.session_id or req.session_id not in memories:
+        return {"verdict": "No conversation history for this session."}
+    history = memories[req.session_id].get()
+    # Last assistant message
+    for msg in reversed(history):
+        if msg["role"] == "assistant":
+            return {"verdict": msg["content"]}
+    return {"verdict": "No verdict available yet."}
