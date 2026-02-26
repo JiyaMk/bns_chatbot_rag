@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import './App.css';
 import Chatbot from './components/Chatbot';
 import { Button } from "@/components/ui/button";
+import "leaflet/dist/leaflet.css";
+import NearbyPolice from './components/NearbyPolice';
 
 function App() {
  const [darkMode, setDarkMode] = useState(false);
@@ -26,6 +28,7 @@ function App() {
             <Button size="sm" variant="outline" onClick={() => setDarkMode(!darkMode)}>
               {darkMode ? "Light Mode" : "Dark Mode"}
             </Button>
+         
           </div>
           <Chatbot />
         </div>

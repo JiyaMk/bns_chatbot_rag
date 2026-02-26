@@ -1,0 +1,55 @@
+.police-panel {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  padding: 24px;
+  border-radius: 6px;
+  max-width: 700px;
+  margin: 24px auto;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+}
+
+.police-panel h3 {
+  margin-bottom: 16px;
+  font-size: 18px;
+  font-weight: 600;
+  color: #1e293b;
+}
+
+.station-item {
+  padding: 16px 0;
+  border-bottom: 1px solid #e2e8f0;
+}
+
+.station-item:last-child {
+  border-bottom: none;
+}
+
+.station-item strong {
+  display: block;
+  font-size: 15px;
+  font-weight: 600;
+  color: #0f172a;
+  margin-bottom: 4px;
+}
+
+.station-item p {
+  margin: 4px 0 8px 0;
+  font-size: 14px;
+  color: #475569;
+}
+
+.station-item a {
+  font-size: 14px;
+  font-weight: 500;
+  text-decoration: none;
+  color: #1d4ed8;
+}
+
+.station-item a:hover {
+  text-decoration: underline;
+}
+
+.police-panel p {
+  font-size: 14px;
+  color: #475569;
+}

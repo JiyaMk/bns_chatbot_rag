@@ -4,6 +4,8 @@ from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from vector_store import VectorStore
 from groq_client import call_llm
+import requests
+import math
 from memory import Memory
 
 app = FastAPI()
@@ -21,6 +23,20 @@ memories = {}
 # Cached retrieval from first user message (ensures we keep theft/snatching etc. from "stole my chain")
 initial_retrievals = {}
 
+def haversine(lat1, lon1, lat2, lon2):
+    R = 6371  # km
+    dLat = math.radians(lat2 - lat1)
+    dLon = math.radians(lon2 - lon1)
+
+    a = (
+        math.sin(dLat / 2) ** 2
+        + math.cos(math.radians(lat1))
+        * math.cos(math.radians(lat2))
+        * math.sin(dLon / 2) ** 2
+    )
+
+    c = 2 * math.atan2(math.sqrt(a), math.sqrt(1 - a))
+    return R * c
 
 def get_memory(session_id: str | None) -> Memory:
     """Get or create memory for a session."""
@@ -31,6 +47,11 @@ def get_memory(session_id: str | None) -> Memory:
 
 
 # Request/Response models
+class NearbyPoliceRequest(BaseModel):
+    lat: float
+    lon: float
+    radius: int = 5000  # meters
+
 class MessageRequest(BaseModel):
     message: str
     session_id: str | None = None
@@ -166,3 +187,54 @@ def verdict(req: VerdictRequest):
         if msg["role"] == "assistant":
             return {"verdict": msg["content"]}
     return {"verdict": "No verdict available yet."}
+
+@app.post("/api/nearby-police")
+def nearby_police(req: NearbyPoliceRequest):
+    try:
+        query = f"""
+        [out:json];
+        node["amenity"="police"](around:{req.radius},{req.lat},{req.lon});
+        out;
+        """
+
+        response = requests.post(
+            "https://overpass-api.de/api/interpreter",
+            data=query,
+            timeout=10
+        )
+
+        data = response.json()
+
+        stations = []
+
+        for element in data.get("elements", []):
+            distance = haversine(
+                req.lat,
+                req.lon,
+                element["lat"],
+                element["lon"]
+            )
+
+            stations.append({
+                "id": element["id"],
+                "name": element.get("tags", {}).get("name", "Police Station"),
+                "latitude": element["lat"],
+                "longitude": element["lon"],
+                "distance_km": round(distance, 2),
+                "google_maps_url": f"https://www.google.com/maps?q={element['lat']},{element['lon']}"
+            })
+
+        stations.sort(key=lambda x: x["distance_km"])
+
+        return {
+            "count": len(stations),
+            "radius_meters": req.radius,
+            "stations": stations[:5]
+        }
+
+    except Exception:
+        return {
+            "count": 0,
+            "stations": [],
+            "error": "Unable to fetch nearby police stations at this time."
+        }
