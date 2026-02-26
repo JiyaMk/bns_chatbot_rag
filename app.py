@@ -1,10 +1,14 @@
 import uuid
+import re
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from vector_store import VectorStore
 from groq_client import call_llm
 from memory import Memory
+from metadata_store import MetadataStore
+
+metadata_store = MetadataStore()
 
 app = FastAPI()
 
@@ -75,6 +79,10 @@ Separate sections with a blank line. Do not invent sections. Do not include sect
 **Rules:** Do not ask about evidence, recordings, or witnesses. Ask only what the legal conditions require.
 """
 
+def extract_section_numbers(text):
+    # Finds patterns like "Section 323"
+    matches = re.findall(r"Section\s+(\d+)", text)
+    return list(set(matches))
 
 @app.post("/api/message")
 def chat(req: MessageRequest):
@@ -134,11 +142,74 @@ Retrieved Sections:
     )
 
     response = call_llm(messages)
+
     if response is None or not str(response).strip():
         response = (
             "I'm having trouble getting a response right now. "
             "Please try again, or rephrase your message."
         )
+    else:
+        sections_found = extract_section_numbers(response)
+
+        if sections_found:
+            enriched_sections = []
+
+            for sec in sections_found:
+                meta_list = metadata_store.get(sec)
+
+                if meta_list:
+                    meta = meta_list[0]
+                    punishment = meta.get("Punishment", "Not specified")
+                    cognizable = meta.get("Cognizable?", "Not specified")
+                    bailable = meta.get("Bailable?", "Not specified")
+                    triable = meta.get("Triable By", "Not specified")
+                else:
+                    punishment = "Not specified"
+                    cognizable = "Not specified"
+                    bailable = "Not specified"
+                    triable = "Not specified"
+
+                enriched_sections.append(
+                    f"""
+    Section {sec}
+    Punishment: {punishment}
+    Cognizable?: {cognizable}
+    Bailable?: {bailable}
+    Triable By: {triable}
+    """
+                )
+
+            enrichment_text = "\n".join(enriched_sections)
+
+            # SECOND LLM CALL — integrate cleanly
+            formatting_prompt = f"""
+    Original Explanation:
+    {response}
+
+    Official Procedural Details:
+    {enrichment_text}
+
+    Rewrite the explanation so that for EACH section,
+    the punishment, cognizable status, bailable status,
+    and triable court are integrated inside that section's block.
+
+    Format:
+
+    Section [number] - [title]
+    What it means: ...
+    Why it applies to you: ...
+    Punishment: ...
+    Cognizable?: ...
+    Bailable?: ...
+    Triable By: ...
+
+    Do not repeat sections.
+    Do not separate procedural details at the bottom.
+    Return clean formatted text only.
+    """
+
+            response = call_llm([{"role": "system", "content": formatting_prompt}])
+
     memory.add("assistant", response)
 
     return {"session_id": session_id, "response": response, "bot": response}
