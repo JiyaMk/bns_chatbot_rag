@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
 import { useNavigate } from "react-router-dom";
+import NearbyPolice from "./NearbyPolice";
 
 export default function Chatbot() {
   const [messages, setMessages] = useState([
@@ -31,6 +32,7 @@ export default function Chatbot() {
   const chatRef = useRef();
   const [activeNearbyIndex, setActiveNearbyIndex] = useState(null);
   const navigate = useNavigate();
+  const [showPolicePanel, setShowPolicePanel] = useState(false);
 
   // Auto-scroll
   useEffect(() => {
@@ -67,40 +69,38 @@ export default function Chatbot() {
     })();
   }, [showVerdict, sessionId]);
 
-  // 🔥 Parse backend formatted sections
-  const parseSections = (text) => {
-    const blocks = text.split(/\n\s*\n/);
+// 🔥 Parse backend formatted sections
+const parseSections = (text) => {
+  const blocks = text.split(/\n\s*\n/);
 
-    return blocks
-      .map((block) => {
-        const lines = block.split("\n").map((l) => l.trim());
-        if (!lines[0]?.startsWith("Section")) return null;
+  return blocks
+    .map((block) => {
+      const lines = block.split("\n").map((l) => l.trim());
+      if (!lines[0]?.startsWith("Section")) return null;
 
-        const sectionLine = lines[0];
-        const content = {};
+      const sectionLine = lines[0];
+      const content = {};
 
-        lines.slice(1).forEach((line) => {
-          const [key, ...rest] = line.split(":");
-          if (rest.length > 0) {
-            content[key.trim()] = rest.join(":").trim();
-          }
-        });
+      lines.slice(1).forEach((line) => {
+        const [key, ...rest] = line.split(":");
+        if (rest.length > 0) {
+          content[key.trim()] = rest.join(":").trim();
+        }
+      });
 
-        return {
-          section: sectionLine,
-          description:
-            (content["What it means"] || "") +
-            (content["Why it applies to you"]
-              ? " " + content["Why it applies to you"]
-              : ""),
-          punishment: content["Punishment"] || "Not specified",
-          cognizable: content["Cognizable?"] || "Not specified",
-          bailable: content["Bailable?"] || "Not specified",
-          triable_by: content["Triable By"] || "Not specified",
-        };
-      })
-      .filter(Boolean);
-  };
+      return {
+        section: sectionLine,
+        meaning: content["What it means"] || "",
+        why_applies: content["Why it applies to you"] || "",
+        punishment: content["Punishment"] || "Not specified",
+        cognizable: content["Cognizable?"] || "Not specified",
+        bailable: content["Bailable?"] || "Not specified",
+        triable_by: content["Triable By"] || "Not specified",
+        compoundable: content["Compoundable?"] || "Not specified",
+      };
+    })
+    .filter(Boolean);
+};
 
   const handleBotResponse = async (userText) => {
     try {
@@ -275,162 +275,248 @@ export default function Chatbot() {
   };
 
   return (
-    <div className="flex flex-col h-[85vh] p-2 max-w-5xl mx-auto border rounded-2xl shadow-lg ">
-      <h1 className="text-2xl font-bold mb-4 text-center">Nirnay Bot</h1>
-      <ScrollArea ref={chatRef} className="flex-1 px-4 py-6 overflow-y-auto">
-        <AnimatePresence initial={false}>
-          {messages.map((msg, idx) => (
-            <motion.div
-              key={idx}
-              initial={{ opacity: 0, y: 10 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.2 }}
-              className="mb-3 flex"
-            >
-              {msg.sender === "user" && (
-                <div className="ml-auto bg-blue-500 text-white p-2 rounded-xl max-w-[70%]">
-                  {msg.text}
-                </div>
-              )}
+  <div className="flex justify-center w-full h-[85vh] relative ">
 
-              {msg.sender === "bot" && !msg.type && (
-                <div
-                  className="mr-auto bg-gray-200 dark:bg-zinc-800 
-text-black dark:text-white 
-p-3 rounded-2xl max-w-[75%]"
-                >
-                  <ReactMarkdown>{msg.text}</ReactMarkdown>
-                </div>
-              )}
+    {/* ================= CHAT SECTION ================= */}
+    <div
+      className={`transition-all duration-300 ${
+        showPolicePanel ? "w-[70%]" : "w-[85%]"
+      }`}
+    >
+      <div className="flex flex-col h-[85vh] p-2 max-w-5xl mx-auto border rounded-2xl shadow-lg  dark:bg-zinc-900">
+        <h1 className="text-2xl font-bold mb-4 text-center">
+          Nirnay Bot
+        </h1>
 
-              {msg.sender === "bot" && msg.type === "sections" && (
-                <div className="mr-auto flex flex-col gap-3 max-w-[70%]">
-                  {msg.sections.map((s, i) => (
-                    <div key={i} className="p-3 bg-gray-100 rounded-xl border">
-                      <h3 className="font-bold text-sm">{s.section}</h3>
+        <ScrollArea
+          ref={chatRef}
+          className="flex-1 px-4 py-6 overflow-y-auto"
+        >
+          <AnimatePresence initial={false}>
+            {messages.map((msg, idx) => (
+              <motion.div
+                key={idx}
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.2 }}
+                className="mb-3 flex"
+              >
+                {/* USER MESSAGE */}
+                {msg.sender === "user" && (
+                  <div className="ml-auto bg-blue-500 text-white p-3 rounded-2xl max-w-[70%]">
+                    {msg.text}
+                  </div>
+                )}
 
-                      <div className="flex flex-wrap gap-2 mt-2">
-                        {renderBadge(s.bailable, "bg-green-700")}
-                        {renderBadge(s.cognizable, "bg-purple-700")}
-                      </div>
+                {/* BOT NORMAL MESSAGE */}
+                {msg.sender === "bot" && !msg.type && (
+                  <div className="mr-auto bg-gray-200 dark:bg-zinc-800 text-black dark:text-white p-3 rounded-2xl max-w-[75%]">
+                    <ReactMarkdown>{msg.text}</ReactMarkdown>
+                  </div>
+                )}
 
-                      <p className="text-sm mt-2">
-                        <strong>Punishment:</strong> {s.punishment}
-                      </p>
+                {/* BOT SECTION CARDS */}
+                {msg.sender === "bot" && msg.type === "sections" && (
+                  <div className="mr-auto flex flex-col gap-3 max-w-[70%] text-black">
+                    {msg.sections.map((s, i) => (
+                      <div
+                        key={i}
+                        className="p-4 bg-gray-100 dark:bg-zinc-800 rounded-xl border"
+                      >
+                        <h3 className="font-bold text-sm">
+                          {s.section}
+                        </h3>
 
-                      <p className="text-sm">
-                        <strong>Triable By:</strong> {s.triable_by}
-                      </p>
+                        {/* BADGES */}
+                        <div className="flex flex-wrap gap-2 mt-2">
+                          {renderBadge(s.bailable, "bg-green-700")}
+                          {renderBadge(s.cognizable, "bg-purple-700")}
+                        </div>
 
-                      {(() => {
-                        const { steps, links, policeRequired } =
-                          getNextStepData(
-                            s.triable_by,
-                            s.cognizable,
-                            s.bailable,
-                            s.compoundable,
-                          );
+                        <p className="text-sm mt-2">
+                          <strong>Punishment:</strong> {s.punishment}
+                        </p>
 
-                        return (
-                          <div className="mt-2 p-3 bg-blue-50 border rounded text-sm">
-                            <strong>Next Steps:</strong>
+                        <p className="text-sm">
+                          <strong>Triable By:</strong> {s.triable_by}
+                        </p>
 
-                            <ul className="list-disc ml-5 mt-2 space-y-1">
-                              {steps.map((step, idx) => (
-                                <li key={idx}>{step}</li>
-                              ))}
-                            </ul>
+                        {/* NEXT STEPS */}
+                        {(() => {
+                          const { steps, links, policeRequired } =
+                            getNextStepData(
+                              s.triable_by,
+                              s.cognizable,
+                              s.bailable,
+                              s.compoundable
+                            );
 
-                            <div className="flex flex-wrap gap-2 mt-3">
-                              {links.map((link, idx) => (
-                                <a
-                                  key={idx}
-                                  href={link.url}
-                                  target="_blank"
-                                  rel="noopener noreferrer"
-                                >
-                                  <Button size="sm" variant="outline">
-                                    {link.label}
-                                  </Button>
-                                </a>
-                              ))}
-                            </div>
+                          return (
+                            <div className="mt-3 p-3 bg-blue-50 dark:bg-zinc-700 border  rounded text-sm">
+                              <strong>Next Steps:</strong>
 
-                            {policeRequired && (
-                              <>
+                              <ul className="list-disc ml-5 mt-2 space-y-1">
+                                {steps.map((step, idx) => (
+                                  <li key={idx}>{step}</li>
+                                ))}
+                              </ul>
+
+                              {/* LINKS */}
+                              <div className="flex flex-wrap gap-2 mt-3">
+                                {links.map((link, idx) => (
+                                  <a
+                                    key={idx}
+                                    href={link.url}
+                                    target="_blank"
+                                    rel="noopener noreferrer"
+                                  >
+                                    <Button
+                                      size="sm"
+                                      variant="outline"
+                                    >
+                                      {link.label}
+                                    </Button>
+                                  </a>
+                                ))}
+                              </div>
+
+                              {/* POLICE PANEL BUTTON */}
+                              {policeRequired && (
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  onClick={() => navigate("/nearby-police")}
+                                  className="mt-3"
+                                  onClick={() =>
+                                    setShowPolicePanel(true)
+                                  }
                                 >
                                   📍 View Nearby Police Stations
                                 </Button>
-                              </>
-                            )}
+                              )}
+                            </div>
+                          );
+                        })()}
+
+                        {/* WHAT IT MEANS */}
+                        {s.meaning && (
+                          <div className="mt-3 p-3 bg-gray-50 dark:bg-zinc-700 border rounded text-sm">
+                            <strong>What it means:</strong>
+                            <p className="mt-1">{s.meaning}</p>
                           </div>
-                        );
-                      })()}
+                        )}
 
-                      {s.description && (
-                        <p className="text-sm mt-2 opacity-80">
-                          {s.description}
-                        </p>
-                      )}
-                    </div>
-                  ))}
-                </div>
-              )}
-            </motion.div>
-          ))}
-        </AnimatePresence>
+                        {/* WHY IT APPLIES */}
+                        {s.why_applies && (
+                          <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900 border border-purple-200 rounded text-sm">
+                            <strong className="text-purple-700 dark:text-purple-300">
+                              Why this applies to your situation:
+                            </strong>
+                            <p className="mt-1">
+                              {s.why_applies}
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </motion.div>
+            ))}
+          </AnimatePresence>
 
-        {loading && (
-          <div className="mr-auto bg-gray-200 p-2 rounded-xl max-w-[70%] text-black">
-            analyzing...
-          </div>
-        )}
-      </ScrollArea>
-
-      <div className="flex gap-2 mb-4">
-        <textarea
-          className="flex-1 p-2 rounded border"
-          placeholder="Type your experience..."
-          value={userInput}
-          onChange={(e) => setUserInput(e.target.value)}
-          onKeyDown={(e) => e.key === "Enter" && !e.shiftKey && handleSend()}
-        />
-        <Button onClick={handleSend}>Send</Button>
-      </div>
-
-      <div className="flex justify-between">
-        <Button onClick={handleReset} variant="destructive">
-          Reset
-        </Button>
-
-        <Dialog open={showVerdict} onOpenChange={setShowVerdict}>
-          <DialogTrigger asChild>
-            <Button>Verdict</Button>
-          </DialogTrigger>
-
-          <DialogContent className="w-[90vw] max-w-[90vw] h-[90vh] max-h-[90vh] overflow-hidden">
-            <DialogHeader>
-              <DialogTitle>Verdict Sections</DialogTitle>
-            </DialogHeader>
-
-            <div className="mt-4 overflow-y-auto max-h-[75vh]">
-              {verdictText && (
-                <div className="p-3 bg-gray-100 rounded border">
-                  <ReactMarkdown>{verdictText}</ReactMarkdown>
-                </div>
-              )}
+          {/* LOADING */}
+          {loading && (
+            <div className="mr-auto bg-gray-200 dark:bg-zinc-800 p-3 rounded-xl max-w-[70%] text-black dark:text-white">
+              analyzing...
             </div>
+          )}
+        </ScrollArea>
 
-            <DialogFooter>
-              <Button onClick={() => setShowVerdict(false)}>Close</Button>
-            </DialogFooter>
-          </DialogContent>
-        </Dialog>
+        {/* INPUT SECTION */}
+        <div className="flex gap-2 mb-4">
+          <textarea
+            className="flex-1 p-2 rounded border"
+            placeholder="Type your experience..."
+            value={userInput}
+            onChange={(e) => setUserInput(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter" && !e.shiftKey) {
+                e.preventDefault();
+                handleSend();
+              }
+            }}
+          />
+          <Button onClick={handleSend}>Send</Button>
+        </div>
+
+        {/* RESET + VERDICT */}
+        <div className="flex justify-between">
+          <Button onClick={handleReset} variant="destructive">
+            Reset
+          </Button>
+
+          <Dialog open={showVerdict} onOpenChange={setShowVerdict}>
+            <DialogTrigger asChild>
+              <Button>Verdict</Button>
+            </DialogTrigger>
+
+            <DialogContent className="w-[90vw] max-w-[90vw] h-[90vh] max-h-[90vh] overflow-hidden">
+              <DialogHeader>
+                <DialogTitle>Verdict Sections</DialogTitle>
+              </DialogHeader>
+
+              <div className="mt-4 overflow-y-auto max-h-[75vh]">
+                {verdictText && (
+                  <div className="p-3 bg-gray-100 dark:bg-zinc-800 rounded border text-black dark:text-white">
+                    <ReactMarkdown>
+                      {verdictText}
+                    </ReactMarkdown>
+                  </div>
+                )}
+              </div>
+
+              <DialogFooter>
+                <Button
+                  onClick={() => setShowVerdict(false)}
+                >
+                  Close
+                </Button>
+              </DialogFooter>
+            </DialogContent>
+          </Dialog>
+        </div>
       </div>
     </div>
-  );
-}
+
+    {/* ================= RIGHT POLICE PANEL ================= */}
+    <AnimatePresence>
+      {showPolicePanel && (
+        <motion.div
+          initial={{ x: 100, opacity: 0 }}
+          animate={{ x: 0, opacity: 1 }}
+          exit={{ x: 100, opacity: 0 }}
+          transition={{ duration: 0.3 }}
+          className="w-[20%] h-[85vh] ml-4 border rounded-2xl shadow-lg bg-gray-50 dark:bg-zinc-800 p-4 overflow-y-auto"
+        >
+          <div className="flex justify-between items-center mb-4 text-black ">
+            <h2 className="font-semibold text-sm text-black dark:text-white">
+              Nearby Police Stations
+            </h2>
+
+            <Button
+              size="sm"
+              variant="ghost"
+              onClick={() => setShowPolicePanel(false)}
+            >
+              ✕
+            </Button>
+          </div>
+
+          <div className="text-sm text-black dark:text-white">
+            <NearbyPolice />
+          </div>
+        </motion.div>
+      )}
+    </AnimatePresence>
+  </div>
+);}
