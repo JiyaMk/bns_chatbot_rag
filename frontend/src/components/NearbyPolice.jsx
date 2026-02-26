@@ -1,6 +1,8 @@
 import { useEffect, useState } from "react";
 import "./NearbyPolice.css";
 
+const API_BASE = import.meta.env.VITE_API_URL || "";
+
 const NearbyPolice = () => {
   const [stations, setStations] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -17,7 +19,7 @@ const NearbyPolice = () => {
       async (position) => {
         try {
           const response = await fetch(
-            "http://127.0.0.1:8000/api/nearby-police",
+            `${API_BASE}/api/nearby-police`,
             {
               method: "POST",
               headers: {
@@ -30,15 +32,19 @@ const NearbyPolice = () => {
             }
           );
 
+          if (!response.ok) {
+            throw new Error("Server error");
+          }
+
           const data = await response.json();
 
           if (data.error) {
             setError(data.error);
           } else {
-            setStations(data.stations);
+            setStations(data.stations || []);
           }
-
         } catch (err) {
+          console.error("Fetch error:", err);
           setError("Unable to fetch police stations.");
         } finally {
           setLoading(false);

@@ -3,26 +3,50 @@ import ReactMarkdown from "react-markdown";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogTrigger, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog";
+
+import {
+  Dialog,
+  DialogTrigger,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogFooter,
+} from "@/components/ui/dialog";
 import { motion, AnimatePresence } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 
 export default function Chatbot() {
   const [messages, setMessages] = useState([
-    { sender: "bot", text: "Hello! Please describe your experience regarding the incident." }
+    {
+      sender: "bot",
+      text: "Hello! Please describe your experience regarding the incident.",
+    },
   ]);
   const [sessionId, setSessionId] = useState(null);
   const API_BASE = import.meta.env.VITE_API_URL || "";
   const [userInput, setUserInput] = useState("");
   const [showVerdict, setShowVerdict] = useState(false);
   const [verdictText, setVerdictText] = useState(null);
-  const [sections, setSections] = useState([]);
+  const [loading, setLoading] = useState(false);
   const chatRef = useRef();
+  const [activeNearbyIndex, setActiveNearbyIndex] = useState(null);
+  const navigate = useNavigate();
 
   // Auto-scroll
   useEffect(() => {
-    chatRef.current?.scrollTo({ top: chatRef.current.scrollHeight, behavior: "smooth" });
-  }, [messages]);
+    const viewport = chatRef.current?.querySelector(
+      "[data-radix-scroll-area-viewport]",
+    );
 
+    if (viewport) {
+      viewport.scrollTo({
+        top: viewport.scrollHeight,
+        behavior: "smooth",
+      });
+    }
+  }, [messages, loading]);
+
+  // Fetch verdict
   useEffect(() => {
     if (!showVerdict || !sessionId) {
       setVerdictText(null);
@@ -43,47 +67,94 @@ export default function Chatbot() {
     })();
   }, [showVerdict, sessionId]);
 
+  // 🔥 Parse backend formatted sections
+  const parseSections = (text) => {
+    const blocks = text.split(/\n\s*\n/);
+
+    return blocks
+      .map((block) => {
+        const lines = block.split("\n").map((l) => l.trim());
+        if (!lines[0]?.startsWith("Section")) return null;
+
+        const sectionLine = lines[0];
+        const content = {};
+
+        lines.slice(1).forEach((line) => {
+          const [key, ...rest] = line.split(":");
+          if (rest.length > 0) {
+            content[key.trim()] = rest.join(":").trim();
+          }
+        });
+
+        return {
+          section: sectionLine,
+          description:
+            (content["What it means"] || "") +
+            (content["Why it applies to you"]
+              ? " " + content["Why it applies to you"]
+              : ""),
+          punishment: content["Punishment"] || "Not specified",
+          cognizable: content["Cognizable?"] || "Not specified",
+          bailable: content["Bailable?"] || "Not specified",
+          triable_by: content["Triable By"] || "Not specified",
+        };
+      })
+      .filter(Boolean);
+  };
+
   const handleBotResponse = async (userText) => {
     try {
+      setLoading(true);
+
       const res = await fetch(`${API_BASE}/api/message`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ message: userText, session_id: sessionId }),
       });
-      const data = await res.json();
 
+      const data = await res.json();
       if (data.session_id) setSessionId(data.session_id);
 
-      if (data.response && data.response.candidates && data.response.candidates.length > 0) {
-        const parsedSections = data.response.candidates.map((c) => ({
-          section: c.section || c.title || "Unknown Section",
-          title: c.title || "",
-          description: c.description || "",
-          bailable:
-            c.bailable === true || String(c.bailable).toLowerCase() === "true" || String(c.bailable).toLowerCase() === "bailable"
-              ? "Bailable"
-              : "Non-bailable",
-          cognizable:
-            c.cognizable === true || String(c.cognizable).toLowerCase() === "true" || String(c.cognizable).toLowerCase() === "cognizable"
-              ? "Cognizable"
-              : "Non-cognizable",
-          punishment: c.punishment || "—",
-          score: c.score ? (c.score * 100).toFixed(1) + "%" : null,
-        }));
+      const botText = data.bot || "";
 
-        setSections(parsedSections);
+      setLoading(false);
 
+      if (!botText) {
+        setMessages((prev) => [...prev, { sender: "bot", text: "(no reply)" }]);
+        return;
+      }
+
+      // If none apply message
+      if (botText.includes("don't clearly match")) {
+        setMessages((prev) => [...prev, { sender: "bot", text: botText }]);
+        return;
+      }
+
+      const parsedSections = parseSections(botText);
+
+      if (parsedSections.length > 0) {
         setMessages((prev) => [
           ...prev,
-          { sender: "bot", type: "sections", sections: parsedSections },
+          {
+            sender: "bot",
+            type: "sections",
+            sections: parsedSections,
+          },
         ]);
       } else {
-        const botText = data.bot || "(no reply)";
         setMessages((prev) => [...prev, { sender: "bot", text: botText }]);
       }
     } catch (err) {
+      setLoading(false);
       console.error("API error:", err);
-      setMessages((prev) => [...prev, { sender: "bot", text: "Sorry — cannot reach the server right now." }]);
+
+      setMessages((prev) => [
+        ...prev,
+        {
+          sender: "bot",
+          text: "Sorry, cannot reach the server right now.",
+        },
+      ]);
     }
   };
 
@@ -105,103 +176,224 @@ export default function Chatbot() {
       const data = await res.json();
       if (data.session_id) setSessionId(data.session_id);
     } catch (err) {
-      console.warn("Reset request failed", err);
+      console.warn("Reset failed", err);
     }
 
-    setMessages([{ sender: "bot", text: "Hello! Please describe your experience regarding the incident." }]);
+    setMessages([
+      {
+        sender: "bot",
+        text: "Hello! Please describe your experience regarding the incident.",
+      },
+    ]);
     setUserInput("");
-    setSections([]);
     setShowVerdict(false);
   };
 
-  // Badge helpers
-  const renderBailableBadge = (bailable) => {
-    const isBailable = String(bailable).toLowerCase() === "bailable";
-    return (
-      <Badge className={`px-2 py-1 rounded ${isBailable ? "bg-green-800 text-white" : "bg-red-800 text-white"}`}>
-        {bailable}
-      </Badge>
-    );
-  };
+  const renderBadge = (label, color) => (
+    <Badge className={`px-2 py-1 rounded text-white ${color}`}>{label}</Badge>
+  );
 
-  const renderCognizableBadge = (cognizable) => {
-    const isCognizable = String(cognizable).toLowerCase() === "cognizable";
-    return (
-      <Badge className={`px-2 py-1 rounded ${isCognizable ? "bg-purple-600 text-white" : "bg-yellow-600 text-black"}`}>
-        {cognizable}
-      </Badge>
-    );
+  const getNextStepData = (triable, cognizable, bailable, compoundable) => {
+    const t = triable?.toLowerCase() || "";
+    const c = cognizable?.toLowerCase() || "";
+    const b = bailable?.toLowerCase() || "";
+    const comp = compoundable?.toLowerCase() || "";
+
+    let steps = [];
+    let links = [];
+
+    const isCognizable = c.includes("cognizable") && !c.includes("non");
+    const isSessions = t.includes("sessions");
+    const isHighCourt = t.includes("high court");
+    const isNonBailable = b.includes("non");
+    const isCompoundable = comp.includes("yes");
+
+    let policeRequired = false;
+
+    // 🔵 HIGH COURT (No police)
+    if (isHighCourt) {
+      steps = [
+        "Consult a senior advocate.",
+        "File an appeal or revision petition.",
+        "Prepare certified copies of previous court orders.",
+      ];
+      return { steps, links, policeRequired };
+    }
+
+    // 🔴 SESSIONS COURT (Serious crime → Police required)
+    if (isSessions) {
+      policeRequired = true;
+
+      steps.push("File FIR immediately at nearest police station.");
+      steps.push("Hire a criminal defense lawyer.");
+
+      if (isNonBailable) {
+        steps.push("Apply for bail urgently (Non-Bailable offence).");
+      } else {
+        steps.push("Apply for bail if required.");
+      }
+
+      links.push({
+        label: "Digital Police Portal",
+        url: "https://digitalpolice.gov.in",
+      });
+
+      return { steps, links, policeRequired };
+    }
+
+    // 🟠 COGNIZABLE (Police required)
+    if (isCognizable) {
+      policeRequired = true;
+
+      steps.push("File an FIR at nearest police station.");
+      steps.push("Preserve all evidence and documents.");
+      steps.push("Emergency: Dial 112");
+
+      if (isCompoundable) {
+        steps.push("Settlement possible with court approval.");
+      }
+
+      links.push({
+        label: "Online FIR Portal",
+        url: "https://digitalpolice.gov.in",
+      });
+
+      return { steps, links, policeRequired };
+    }
+
+    // 🟢 NON-COGNIZABLE (No police immediately)
+    steps.push("File a private complaint before the Magistrate.");
+    steps.push("Police investigation requires Magistrate approval.");
+
+    if (isCompoundable) {
+      steps.push("Try mediation or settlement.");
+    } else {
+      steps.push("Consult a legal professional for guidance.");
+    }
+
+    return { steps, links, policeRequired };
   };
 
   return (
-    <div className="flex flex-col h-[90vh] max-w-[60vw] mx-auto p-4 bg-[var(--background)] text-[var(--foreground)] rounded-xl shadow-lg border border-[var(--border)]">
+    <div className="flex flex-col h-[85vh] p-2 max-w-5xl mx-auto border rounded-2xl shadow-lg ">
       <h1 className="text-2xl font-bold mb-4 text-center">Nirnay Bot</h1>
-
-      <ScrollArea ref={chatRef} className="flex-1 mb-4 p-2 bg-[var(--card)] overflow-y-auto rounded">
+      <ScrollArea ref={chatRef} className="flex-1 px-4 py-6 overflow-y-auto">
         <AnimatePresence initial={false}>
           {messages.map((msg, idx) => (
             <motion.div
               key={idx}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0 }}
-              transition={{ duration: 0.22 }}
-              className="mb-2 flex"
+              transition={{ duration: 0.2 }}
+              className="mb-3 flex"
             >
-              {/* User message */}
               {msg.sender === "user" && (
-                <div className="ml-auto bg-blue-500 text-white p-2 rounded-xl max-w-[70%] break-words">
+                <div className="ml-auto bg-blue-500 text-white p-2 rounded-xl max-w-[70%]">
                   {msg.text}
                 </div>
               )}
 
-              {/* Bot normal text */}
               {msg.sender === "bot" && !msg.type && (
-                <div className="mr-auto bg-gray-200 dark:bg-gray-300 text-gray-800 p-2 rounded-xl max-w-[70%] break-words [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_h3]:font-bold [&_h3]:mt-2">
+                <div
+                  className="mr-auto bg-gray-200 dark:bg-zinc-800 
+text-black dark:text-white 
+p-3 rounded-2xl max-w-[75%]"
+                >
                   <ReactMarkdown>{msg.text}</ReactMarkdown>
                 </div>
               )}
 
-              {/* Bot legal sections */}
               {msg.sender === "bot" && msg.type === "sections" && (
-             <div className="mr-auto flex flex-col space-y-3">
-  {msg.sections.map((s, sIdx) => (
-    <div
-      key={sIdx}
-      className="p-3 bg-gray-100 dark:bg-gray-200 text-gray-900 rounded-xl max-w-[70%] border border-gray-300 break-words"
-    >
-      <div className="flex justify-between items-center">
-        <h3 className="font-bold text-sm">{s.section}</h3>
-        {s.score && <span className="text-xs font-semibold text-gray-700">Confidence: {s.score}</span>}
-      </div>
+                <div className="mr-auto flex flex-col gap-3 max-w-[70%]">
+                  {msg.sections.map((s, i) => (
+                    <div key={i} className="p-3 bg-gray-100 rounded-xl border">
+                      <h3 className="font-bold text-sm">{s.section}</h3>
 
-      {s.title && <p className="text-xs opacity-70">{s.title}</p>}
+                      <div className="flex flex-wrap gap-2 mt-2">
+                        {renderBadge(s.bailable, "bg-green-700")}
+                        {renderBadge(s.cognizable, "bg-purple-700")}
+                      </div>
 
-      {/* Badges container */}
-      <div className="flex flex-wrap gap-2 mt-2">
-        {renderBailableBadge(s.bailable)}
-        {renderCognizableBadge(s.cognizable)}
-        {/* Punishment badge: wrap long text */}
-        <Badge className="px-2 py-1 border border-gray-600  rounded break-words max-w-full whitespace-normal">
-          {s.punishment}
-        </Badge>
-      </div>
+                      <p className="text-sm mt-2">
+                        <strong>Punishment:</strong> {s.punishment}
+                      </p>
 
-      {s.description && <p className="text-sm mt-2 opacity-80 break-words">{s.description}</p>}
-    </div>
-  ))}
-</div>
+                      <p className="text-sm">
+                        <strong>Triable By:</strong> {s.triable_by}
+                      </p>
 
+                      {(() => {
+                        const { steps, links, policeRequired } =
+                          getNextStepData(
+                            s.triable_by,
+                            s.cognizable,
+                            s.bailable,
+                            s.compoundable,
+                          );
+
+                        return (
+                          <div className="mt-2 p-3 bg-blue-50 border rounded text-sm">
+                            <strong>Next Steps:</strong>
+
+                            <ul className="list-disc ml-5 mt-2 space-y-1">
+                              {steps.map((step, idx) => (
+                                <li key={idx}>{step}</li>
+                              ))}
+                            </ul>
+
+                            <div className="flex flex-wrap gap-2 mt-3">
+                              {links.map((link, idx) => (
+                                <a
+                                  key={idx}
+                                  href={link.url}
+                                  target="_blank"
+                                  rel="noopener noreferrer"
+                                >
+                                  <Button size="sm" variant="outline">
+                                    {link.label}
+                                  </Button>
+                                </a>
+                              ))}
+                            </div>
+
+                            {policeRequired && (
+                              <>
+                                <Button
+                                  size="sm"
+                                  variant="secondary"
+                                  onClick={() => navigate("/nearby-police")}
+                                >
+                                  📍 View Nearby Police Stations
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        );
+                      })()}
+
+                      {s.description && (
+                        <p className="text-sm mt-2 opacity-80">
+                          {s.description}
+                        </p>
+                      )}
+                    </div>
+                  ))}
+                </div>
               )}
             </motion.div>
           ))}
         </AnimatePresence>
+
+        {loading && (
+          <div className="mr-auto bg-gray-200 p-2 rounded-xl max-w-[70%] text-black">
+            analyzing...
+          </div>
+        )}
       </ScrollArea>
 
-      {/* Input */}
       <div className="flex gap-2 mb-4">
         <textarea
-          className="flex-1 p-2 rounded border border-gray-300"
+          className="flex-1 p-2 rounded border"
           placeholder="Type your experience..."
           value={userInput}
           onChange={(e) => setUserInput(e.target.value)}
@@ -210,37 +402,34 @@ export default function Chatbot() {
         <Button onClick={handleSend}>Send</Button>
       </div>
 
-      <div className="flex justify-between gap-2">
-        <Button onClick={handleReset} variant="destructive">Reset</Button>
+      <div className="flex justify-between">
+        <Button onClick={handleReset} variant="destructive">
+          Reset
+        </Button>
 
         <Dialog open={showVerdict} onOpenChange={setShowVerdict}>
-  <DialogTrigger asChild>
-    <Button>Verdict</Button>
-  </DialogTrigger>
+          <DialogTrigger asChild>
+            <Button>Verdict</Button>
+          </DialogTrigger>
 
-  <DialogContent className="w-[90vw] max-w-[90vw] h-[90vh] max-h-[90vh] border border-[var(--border)] bg-[var(--card)] rounded-xl p-4 overflow-hidden">
-    <DialogHeader>
-      <DialogTitle>Verdict Sections</DialogTitle>
-    </DialogHeader>
+          <DialogContent className="w-[90vw] max-w-[90vw] h-[90vh] max-h-[90vh] overflow-hidden">
+            <DialogHeader>
+              <DialogTitle>Verdict Sections</DialogTitle>
+            </DialogHeader>
 
-    {/* Scrollable content */}
-    <div className="mt-4 space-y-4 overflow-y-auto max-h-[75vh] pr-2">
-      {verdictText && (
-        <div className="p-3 mb-3 bg-[var(--input)] rounded border break-words [&_p]:mb-2 [&_p:last-child]:mb-0 [&_ul]:list-disc [&_ul]:ml-4 [&_ol]:list-decimal [&_ol]:ml-4 [&_h3]:font-bold [&_h3]:mt-2">
-          <ReactMarkdown>{verdictText}</ReactMarkdown>
-        </div>
-      )}
+            <div className="mt-4 overflow-y-auto max-h-[75vh]">
+              {verdictText && (
+                <div className="p-3 bg-gray-100 rounded border">
+                  <ReactMarkdown>{verdictText}</ReactMarkdown>
+                </div>
+              )}
+            </div>
 
-    </div>
-       
-     
-
-    <DialogFooter>
-      <Button onClick={() => setShowVerdict(false)}>Close</Button>
-    </DialogFooter>
-  </DialogContent>
-</Dialog>
-
+            <DialogFooter>
+              <Button onClick={() => setShowVerdict(false)}>Close</Button>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
       </div>
     </div>
   );
