@@ -283,7 +283,7 @@ const parseSections = (text) => {
         showPolicePanel ? "w-[70%]" : "w-[85%]"
       }`}
     >
-      <div className="flex flex-col h-[85vh] p-2 max-w-5xl mx-auto border rounded-2xl shadow-lg  dark:bg-zinc-900">
+      <div className="flex flex-col h-[85vh] p-2 max-w-5xl mx-auto border rounded-2xl shadow-lg  ">
         <h1 className="text-2xl font-bold mb-4 text-center">
           Nirnay Bot
         </h1>
@@ -310,7 +310,7 @@ const parseSections = (text) => {
 
                 {/* BOT NORMAL MESSAGE */}
                 {msg.sender === "bot" && !msg.type && (
-                  <div className="mr-auto bg-gray-200 dark:bg-zinc-800 text-black dark:text-white p-3 rounded-2xl max-w-[75%]">
+                  <div className="mr-auto bg-gray-200  text-black  p-3 rounded-2xl max-w-[75%]">
                     <ReactMarkdown>{msg.text}</ReactMarkdown>
                   </div>
                 )}
@@ -321,7 +321,7 @@ const parseSections = (text) => {
                     {msg.sections.map((s, i) => (
                       <div
                         key={i}
-                        className="p-4 bg-gray-100 dark:bg-zinc-800 rounded-xl border"
+                        className="p-4 bg-gray-100  rounded-xl border"
                       >
                         <h3 className="font-bold text-sm">
                           {s.section}
@@ -352,7 +352,7 @@ const parseSections = (text) => {
                             );
 
                           return (
-                            <div className="mt-3 p-3 bg-blue-50 dark:bg-zinc-700 border  rounded text-sm">
+                            <div className="mt-3 p-3 bg-blue-50  border  rounded text-sm">
                               <strong>Next Steps:</strong>
 
                               <ul className="list-disc ml-5 mt-2 space-y-1">
@@ -399,7 +399,7 @@ const parseSections = (text) => {
 
                         {/* WHAT IT MEANS */}
                         {s.meaning && (
-                          <div className="mt-3 p-3 bg-gray-50 dark:bg-zinc-700 border rounded text-sm">
+                          <div className="mt-3 p-3 bg-gray-50  border rounded text-sm">
                             <strong>What it means:</strong>
                             <p className="mt-1">{s.meaning}</p>
                           </div>
@@ -407,8 +407,8 @@ const parseSections = (text) => {
 
                         {/* WHY IT APPLIES */}
                         {s.why_applies && (
-                          <div className="mt-3 p-3 bg-purple-50 dark:bg-purple-900 border border-purple-200 rounded text-sm">
-                            <strong className="text-purple-700 dark:text-purple-300">
+                          <div className="mt-3 p-3 bg-purple-50  border border-purple-200 rounded text-sm">
+                            <strong className="text-purple-700 ">
                               Why this applies to your situation:
                             </strong>
                             <p className="mt-1">
@@ -426,7 +426,7 @@ const parseSections = (text) => {
 
           {/* LOADING */}
           {loading && (
-            <div className="mr-auto bg-gray-200 dark:bg-zinc-800 p-3 rounded-xl max-w-[70%] text-black dark:text-white">
+            <div className="mr-auto bg-gray-200  p-3 rounded-xl max-w-[70%] text-black ">
               analyzing...
             </div>
           )}
@@ -467,7 +467,7 @@ const parseSections = (text) => {
 
               <div className="mt-4 overflow-y-auto max-h-[75vh]">
                 {verdictText && (
-                  <div className="p-3 bg-gray-100 dark:bg-zinc-800 rounded border text-black dark:text-white">
+                  <div className="p-3 bg-gray-100  rounded border text-black ">
                     <ReactMarkdown>
                       {verdictText}
                     </ReactMarkdown>
@@ -496,10 +496,10 @@ const parseSections = (text) => {
           animate={{ x: 0, opacity: 1 }}
           exit={{ x: 100, opacity: 0 }}
           transition={{ duration: 0.3 }}
-          className="w-[20%] h-[85vh] ml-4 border rounded-2xl shadow-lg bg-gray-50 dark:bg-zinc-800 p-4 overflow-y-auto"
+          className="w-[20%] h-[85vh] ml-4 border rounded-2xl shadow-lg bg-gray-50  p-4 overflow-y-auto"
         >
           <div className="flex justify-between items-center mb-4 text-black ">
-            <h2 className="font-semibold text-sm text-black dark:text-white">
+            <h2 className="font-semibold text-sm text-black ">
               Nearby Police Stations
             </h2>
 
@@ -512,7 +512,7 @@ const parseSections = (text) => {
             </Button>
           </div>
 
-          <div className="text-sm text-black dark:text-white">
+          <div className="text-sm text-black">
             <NearbyPolice />
           </div>
         </motion.div>
