@@ -275,22 +275,44 @@ const parseSections = (text) => {
   };
 
   return (
-  <div className="flex justify-center w-full h-[85vh] relative ">
+ <div className="flex w-full h-screen ">
+      {/* ================= LEFT INFO PANEL ================= */}
+  <div className="w-[20%] border-r p-6 flex flex-col items-center text-center bg-white">
+    
+    <img
+      src="/nirnaybot_logo_transparent.png"
+      alt="Nirnay Bot"
+      className="w-60 mb-4"
+    />
 
+    <h2 className="text-xl font-bold mb-2">Nirnay Bot</h2>
+
+    <p className="text-sm text-gray-600">
+      AI powered legal advisory system based on the Bharatiya Nyaya
+      Sanhita (BNS). Describe your incident and receive possible
+      applicable sections, punishments, and next legal steps.
+    </p>
+
+    <div className="mt-6 text-xs text-gray-500">
+      
+    </div>
+
+  </div>
     {/* ================= CHAT SECTION ================= */}
-    <div
-      className={`transition-all duration-300 ${
-        showPolicePanel ? "w-[70%]" : "w-[85%]"
-      }`}
-    >
-      <div className="flex flex-col h-[85vh] p-2 max-w-5xl mx-auto border rounded-2xl shadow-lg  ">
-        <h1 className="text-2xl font-bold mb-4 text-center">
-          Nirnay Bot
-        </h1>
+ 
+    <div className="flex-1 flex justify-center ">
+
+    <div className="w-full  flex flex-col h-[95%] p-4">
+
+    <div className="text-center mb-6">
+  <h1 className="text-3xl font-bold text-slate-800 tracking-tight">
+    Nirnay Bot Legal Assistant
+  </h1>
+  </div>
 
         <ScrollArea
           ref={chatRef}
-          className="flex-1 px-4 py-6 overflow-y-auto"
+          className="flex-1 px-4 overflow-y-auto"
         >
           <AnimatePresence initial={false}>
             {messages.map((msg, idx) => (
@@ -303,7 +325,7 @@ const parseSections = (text) => {
               >
                 {/* USER MESSAGE */}
                 {msg.sender === "user" && (
-                  <div className="ml-auto bg-blue-500 text-white p-3 rounded-2xl max-w-[70%]">
+                  <div className="ml-auto bg-blue-900 text-white p-3 rounded-2xl max-w-[70%]">
                     {msg.text}
                   </div>
                 )}
@@ -385,7 +407,7 @@ const parseSections = (text) => {
                                 <Button
                                   size="sm"
                                   variant="secondary"
-                                  className="mt-3"
+                                 className="mt-3 border border-black"
                                   onClick={() =>
                                     setShowPolicePanel(true)
                                   }
@@ -489,34 +511,35 @@ const parseSections = (text) => {
     </div>
 
     {/* ================= RIGHT POLICE PANEL ================= */}
-    <AnimatePresence>
-      {showPolicePanel && (
-        <motion.div
-          initial={{ x: 100, opacity: 0 }}
-          animate={{ x: 0, opacity: 1 }}
-          exit={{ x: 100, opacity: 0 }}
-          transition={{ duration: 0.3 }}
-          className="w-[20%] h-[85vh] ml-4 border rounded-2xl shadow-lg bg-gray-50  p-4 overflow-y-auto"
+     <AnimatePresence>
+  {showPolicePanel && (
+    <motion.div
+      initial={{ x: 100, opacity: 0 }}
+      animate={{ x: 0, opacity: 1 }}
+      exit={{ x: 100, opacity: 0 }}
+      transition={{ duration: 0.3 }}
+      className="w-[25%] border-l bg-white p-4 overflow-y-auto"
+    >
+
+      <div className="flex justify-between mb-4">
+        <h2 className="font-semibold text-sm">
+         
+        </h2>
+
+        <Button
+          size="sm"
+          variant="ghost"
+          bg-color="red"
+          onClick={() => setShowPolicePanel(false)}
         >
-          <div className="flex justify-between items-center mb-4 text-black ">
-            <h2 className="font-semibold text-sm text-black ">
-              Nearby Police Stations
-            </h2>
+          ✕
+        </Button>
+      </div>
 
-            <Button
-              size="sm"
-              variant="ghost"
-              onClick={() => setShowPolicePanel(false)}
-            >
-              ✕
-            </Button>
-          </div>
+      <NearbyPolice />
 
-          <div className="text-sm text-black">
-            <NearbyPolice />
-          </div>
-        </motion.div>
-      )}
-    </AnimatePresence>
+    </motion.div>
+  )}
+  </AnimatePresence>
   </div>
 );}
