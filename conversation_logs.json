@@ -1,0 +1,74 @@
+{
+  "BNS-001": [
+    {
+      "user": "I want to file a complaint against my husband."
+    },
+    {
+      "bot": "Could you describe the specific wrongdoing by your husband that you want to complain about? For example, physical abuse, emotional cruelty, stalking, or any other conduct?  \n\nHas your husband subjected you to any form of cruelty or violence?"
+    },
+    {
+      "user": "My husband subjected me to physical abuse and emotional cruelty when he locked me in a room and beat me with a belt."
+    },
+    {
+      "bot": "Did your husband lock you in a room?  \n\nDid he beat you with a belt in a way that caused you bodily pain or injury?"
+    },
+    {
+      "user": "Yes, my husband locked me in a room. \n\nYes, he beat me with a belt in a way that caused me bodily pain and injury."
+    },
+    {
+      "bot": "Section 85 \u2013 Cruelty by Husband  \nWhat it means: A husband who subjects his wife to cruelty\u2014behaviour that causes her to suffer physical or mental harm\u2014can be punished.  \nWhy it applies to you: Your husband locked you in a room and beat you with a belt, which is a clear act of cruelty.  \nPunishment: Imprisonment up to 3 years and a fine.  \nCognizable?: Cognizable if information relating to the commission of the offence is given to an officer in charge of a police station by the person aggrieved by the offence or by any person related to her by blood, marriage or adoption or if there is no such relative, by any public servant belonging to such class or category as may be notified by the State Government in this behalf.  \nBailable?: Non-bailable.  \nTriable By: Magistrate of the first class.  \n\nSection 86 \u2013 Definition of Cruelty  \nWhat it means: Provides the legal definition of \u201ccruelty\u201d for the purposes of Section\u202f85, including acts likely to cause grave injury or danger to life, limb or health.  \nWhy it applies to you: The beating with a belt caused bodily pain and injury, fitting the definition of cruelty.  \nPunishment: Not specified.  \nCognizable?: Not specified.  \nBailable?: Not specified.  \nTriable By: Not specified.  \n\nSection 114 \u2013 Causing Hurt  \nWhat it means: Whoever causes bodily pain, disease or infirmity to another person is said to cause hurt.  \nWhy it applies to you: The belt beating caused you bodily pain and injury.  \nPunishment: Not specified.  \nCognizable?: Not specified.  \nBailable?: Not specified.  \nTriable By: Not specified.  \n\nSection 115 \u2013 Voluntarily Causing Hurt  \nWhat it means: Whoever intentionally or knowingly causes hurt to another person is guilty of voluntarily causing hurt.  \nWhy it applies to you: Your husband intentionally beat you with a belt, knowing it would cause hurt.  \nPunishment: Imprisonment up to 1 year and/or a fine of up to 10,000 rupees.  \nCognizable?: Non-cognizable.  \nBailable?: Bailable.  \nTriable By: Any Magistrate.  \n\nSection 74 \u2013 Assault or Use of Criminal Force  \nWhat it means: Whoever assaults or uses criminal force against a woman, knowing it may outrage her modesty or cause injury, is punishable.  \nWhy it applies to you: The belt beating is an assault with criminal force that caused injury.  \nPunishment: Imprisonment up to 3 years and a fine.  \nCognizable?: Cognizable.  \nBailable?: Non-bailable.  \nTriable By: Any Magistrate.  \n\nSection 333 \u2013 Wrongful Restraint and House\u2011Trespass  \nWhat it means: Whoever commits house\u2011trespass or wrongfully restrains a person, or puts them in fear of hurt, is punishable.  \nWhy it applies to you: Your husband locked you in a room, wrongfully restraining you.  \nPunishment: Imprisonment up to 7 years and a fine.  \nCognizable?: Non-cognizable.  \nBailable?: Non-bailable.  \nTriable By: Any Magistrate."
+    }
+  ],
+  "BNS-002": [
+    {
+      "user": "Someone tried to kill me with a rod last night."
+    },
+    {
+      "bot": ""
+    },
+    {
+      "user": "My neighbor attacked me with a sharp iron rod near my gate around 10 PM last night."
+    },
+    {
+      "bot": "Did you suffer any injury or hurt as a result of the attack?  \nDid the neighbor threaten you with death or serious harm (e.g., saying he would kill you or cause grievous injury)?"
+    },
+    {
+      "user": "Yes, I suffered a fractured bone in my shoulder as a result of the attack. \n\nMy neighbor threatened me with death by saying 'I will finish you today'."
+    },
+    {
+      "bot": "Section 118 - Voluntary causing grievous hurt with instrument likely to cause death  \nWhat it means: Whoever voluntarily causes grievous hurt with an instrument likely to cause death (like a sharp rod) is punished with imprisonment for life or up to ten years, plus a fine.  \nWhy it applies to you: You were struck with a sharp iron rod and suffered a fractured shoulder, which is grievous hurt caused by an instrument likely to cause death.  \nPunishment: Imprisonment for 3 years, or fine of 20,000 rupees, or both.  \nCognizable?: Cognizable.  \nBailable?: Non\u2011bailable.  \nTriable By: Any Magistrate.  \n\nSection 130 - Assault by threat of force  \nWhat it means: Using force or a gesture that makes a person believe you will use criminal force is an assault.  \nWhy it applies to you: The neighbor used a sharp rod and threatened you with death, which constitutes assault.  \nPunishment: Imprisonment up to 2 years, or a fine, or both.  \nCognizable?: Not specified.  \nBailable?: Not specified.  \nTriable By: Not specified.  \n\nSection 351 - Criminal intimidation by threat of death or grievous hurt  \nWhat it means: Threatening another person with death or grievous hurt, or with an offence punishable by death or life imprisonment, is criminal intimidation.  \nWhy it applies to you: The neighbor said, \u201cI will finish you today,\u201d threatening death.  \nPunishment: Imprisonment for 2 years, or a fine, or both.  \nCognizable?: Non\u2011cognizable.  \nBailable?: Bailable.  \nTriable By: Any Magistrate."
+    }
+  ],
+  "BNS-003": [
+    {
+      "user": "My maid took my jewelry from the house."
+    },
+    {
+      "bot": "Could you confirm whether the maid took the jewelry without your permission and intended to keep or sell it?  \nAlso, was the jewelry in your possession at the time it was taken?"
+    },
+    {
+      "user": "Yes, the maid took the jewelry without my permission and intended to keep or sell it. \n\nYes, the jewelry was in my possession at the time it was taken."
+    },
+    {
+      "bot": ""
+    },
+    {
+      "user": "The house help has been working with us for 3 years."
+    },
+    {
+      "bot": ""
+    },
+    {
+      "user": "The house help has been working with us for 3 years."
+    },
+    {
+      "bot": ""
+    },
+    {
+      "user": "My house help has been working with us for 3 years."
+    },
+    {
+      "bot": ""
+    }
+  ]
+}

@@ -232,8 +232,22 @@ Retrieved Sections:
             response = call_llm([{"role": "system", "content": formatting_prompt}])
 
     memory.add("assistant", response)
+ 
+    retrieved_section_numbers = []
 
-    return {"session_id": session_id, "response": response, "bot": response}
+    for doc in retrieved_sections:
+      nums = extract_section_numbers(doc)
+      retrieved_section_numbers.extend(nums)
+
+    retrieved_section_numbers = list(set(retrieved_section_numbers))
+
+    return {
+    "session_id": session_id,
+    "response": response,
+    "bot": response,
+    "retrieved_sections": retrieved_section_numbers,
+    "retrieved_docs": retrieved_sections
+    }
 
 
 @app.post("/api/reset")
