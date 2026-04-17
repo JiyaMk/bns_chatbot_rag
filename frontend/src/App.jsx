@@ -1,9 +1,7 @@
-import { useState, useEffect } from "react";
 import { Routes, Route } from "react-router-dom";
 import "./App.css";
 import Chatbot from "./components/Chatbot";
 import NearbyPolice from "./components/NearbyPolice";
-import { Button } from "@/components/ui/button";
 import "leaflet/dist/leaflet.css";
 
 function App() {

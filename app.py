@@ -30,7 +30,13 @@ app.add_middleware(
 def home():
     return {"message": "Backend is running 🚀"}
 
-vector_store = VectorStore()
+vector_store_instance = None
+
+def get_vector_store():
+    global vector_store_instance
+    if vector_store_instance is None:
+        vector_store_instance = VectorStore()
+    return vector_store_instance
 memories = {}
 # Cached retrieval from first user message (ensures we keep theft/snatching etc. from "stole my chain")
 initial_retrievals = {}
@@ -139,11 +145,13 @@ def chat(req: MessageRequest):
     if len(user_messages) == 1:
         # First message: retrieve and cache for this session
         q1 = expand_query(user_messages[0])
-        initial_retrievals[session_id] = vector_store.retrieve(q1, top_k=10)
+        vs = get_vector_store()
+        initial_retrievals[session_id] = vs.retrieve(q1, top_k=10)
         retrieved_sections = initial_retrievals[session_id]
     else:
         # Later: retrieve with full conversation, merge with initial (never lose theft/snatching from "stole my chain")
-        fresh = vector_store.retrieve(expand_query(full_query), top_k=15)
+        vs = get_vector_store()
+        fresh = vs.retrieve(expand_query(full_query), top_k=15)
         initial = initial_retrievals.get(session_id, [])
         seen = set()
         merged = []
