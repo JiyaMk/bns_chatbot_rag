@@ -9,6 +9,10 @@ import requests
 import math
 from memory import Memory
 from metadata_store import MetadataStore
+from dotenv import load_dotenv
+import os
+
+load_dotenv()
 
 metadata_store = MetadataStore()
 
@@ -16,11 +20,15 @@ app = FastAPI()
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:5173", "http://127.0.0.1:5173"],
+    allow_origins=["*"],
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+@app.get("/")
+def home():
+    return {"message": "Backend is running 🚀"}
 
 vector_store = VectorStore()
 memories = {}
@@ -162,7 +170,10 @@ Retrieved Sections:
         }
     )
 
-    response = call_llm(messages)
+    try:
+        response = call_llm(messages)
+    except Exception:
+        response = "Error contacting AI service. Please try again."
 
     if response is None or not str(response).strip():
         response = (
